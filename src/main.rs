@@ -1,4 +1,4 @@
-use actix_web::{web, App, HttpServer, HttpResponse};
+use actix_web::{web, App, HttpResponse, HttpServer};
 
 async fn health_check() -> HttpResponse {
     HttpResponse::Ok().finish()
@@ -6,10 +6,7 @@ async fn health_check() -> HttpResponse {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
-        App::new()
-            .route("/health_check", web::get().to(health_check))
-    })
+    HttpServer::new(|| App::new().route("/health_check", web::get().to(health_check)))
         .bind("127.0.0.1:8000")?
         .run()
         .await
@@ -17,8 +14,8 @@ async fn main() -> std::io::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use actix_web::http::StatusCode;
     use crate::health_check;
+    use actix_web::http::StatusCode;
 
     #[actix_web::test]
     async fn health_check_succeeds() {
