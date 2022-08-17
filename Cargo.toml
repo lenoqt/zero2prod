@@ -10,6 +10,7 @@ authors = ["Gustavo Barrios <gustavoantonio51@gmail.com>"]
 actix-web = "^4"
 env_logger = "^0.9.0"
 log = "^0.4.17"
+serde = { version = "^1.0.143", features = ["derive"] }
 
 [dev-dependencies]
 reqwest = "0.11.11"
