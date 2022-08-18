@@ -1,9 +1,13 @@
 use std::net::TcpListener;
-use zero2prod::{run, setup_logger};
+use zero2prod::configuration::get_configuration;
+use zero2prod::startup::{run, setup_logger};
 
-#[actix_web::main]
+#[tokio::main]
 async fn main() -> std::io::Result<()> {
+    // Panic if we can't read the configuration
+    let configuration = get_configuration().expect("Failed to read configuration.");
+    let address = format!("127.0.0.1:{}", configuration.application_port);
     setup_logger();
-    let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
+    let listener = TcpListener::bind(address)?;
     run(listener)?.await
 }
