@@ -12,19 +12,11 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 env_logger = "^0.9.0"
 log = "^0.4.17"
 serde = { version = "^1.0.143", features = ["derive"] }
-config = "0.13.2"
+config = { version= "0.13", default-features = false, features = ["yaml"] }
+uuid = { version = "1", features = ["v4"] }
+chrono = "0.4.15"
+sqlx = { version = "0.6", default-features = false, features = ["runtime-actix-rustls", "macros", "postgres", "uuid", "chrono", "migrate"]}
 
-[dependencies.sqlx]
-version = "0.6.1"
-default-features = false
-features = [
-    "runtime-actix-rustls",
-    "macros",
-    "postgres",
-    "uuid",
-    "chrono",
-    "migrate"
-]
 
 [dev-dependencies]
 reqwest = "0.11.11"
@@ -42,22 +34,3 @@ path = "src/lib.rs"
 [[bin]]
 path = "src/main.rs"
 name = "zero2prod"
-# On Windows
-# ```
-# cargo install -f cargo-binutils
-# rustup component add llvm-tools-preview
-# ```
-[target.x86_64-pc-windows-msvc]
-rustflags = ["-C", "link-arg=-fuse-ld=lld"]
-[target.x86_64-pc-windows-gnu]
-rustflags = ["-C", "link-arg=-fuse-ld=lld"]
-# On Linux:
-# - Ubuntu, `sudo apt-get install lld clang`
-# - Arch, `sudo pacman -S lld clang`
-[target.x86_64-unknown-linux-gnu]
-rustflags = ["-C", "linker=clang", "-C", "link-arg=-fuse-ld=lld"]
-# On MacOS, `brew install michaeleisel/zld/zld`
-[target.x86_64-apple-darwin]
-rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/zld"]
-[target.aarch64-apple-darwin]
-rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/zld"]
