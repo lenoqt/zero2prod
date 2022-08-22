@@ -1,5 +1,7 @@
 //! src/configuration.rs
 //!
+use config::Config;
+
 #[derive(serde::Deserialize)]
 pub struct Settings {
     pub database: DatabaseSettings,
@@ -26,12 +28,12 @@ impl DatabaseSettings {
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
     // Initialize our configuration reader
-    let settings = config::Config::default();
-
+    let settings = Config::builder()
     // Add configuration values from a file named `configuration`.
     // It will look for any top-level file with an extension
     // that `config` knows how to parse: yaml, json, etc.
-
+    .add_source(config::File::new("configuration.yaml", config::FileFormat::Yaml))
+    .build()?;
     // Try to convert the configuration values it read into
     // our Settings type
     settings.try_deserialize::<Settings>()

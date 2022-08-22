@@ -17,7 +17,7 @@ pub fn setup_logger() {
 pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Error> {
     let address = listener.local_addr().unwrap().to_string();
     // Wrap the connection in a smart pointer
-    let connection = web::Data::new(db_pool);
+    let db_pool = web::Data::new(db_pool);
     log::info!("Starting HTTP at {address}");
 
     // Capture `connection` from the surrounding environment
