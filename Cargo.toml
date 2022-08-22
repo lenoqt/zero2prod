@@ -14,9 +14,8 @@ log = "^0.4.17"
 serde = { version = "^1.0.143", features = ["derive"] }
 config = { version= "0.13", default-features = false, features = ["yaml"] }
 uuid = { version = "1", features = ["v4"] }
-chrono = "0.4.15"
-sqlx = { version = "0.6", default-features = false, features = ["runtime-actix-native-tls", "macros", "postgres", "uuid", "chrono", "migrate"]}
-
+chrono = "0.4.22"
+sqlx = { version = "0.6.1", default-features = false, features = ["runtime-actix-native-tls", "macros", "postgres", "uuid", "chrono", "migrate"]}
 
 [dev-dependencies]
 reqwest = "0.11.11"
