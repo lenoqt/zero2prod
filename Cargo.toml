@@ -16,6 +16,9 @@ config = { version= "0.13", default-features = false, features = ["yaml"] }
 uuid = { version = "1", features = ["v4"] }
 chrono = "0.4.22"
 sqlx = { version = "0.6.1", default-features = false, features = ["runtime-actix-native-tls", "macros", "postgres", "uuid", "chrono", "migrate"]}
+tracing = { version = "0.1", features = ["log"] }
+tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
+tracing-bunyan-formatter = "0.3"
 
 [dev-dependencies]
 reqwest = "0.11.11"
