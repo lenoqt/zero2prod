@@ -13,7 +13,7 @@ serde = { version = "^1.0.143", features = ["derive"] }
 config = { version= "0.13", default-features = false, features = ["yaml"] }
 uuid = { version = "1", features = ["v4"] }
 chrono = "0.4.22"
-
+serde-aux = "3"
 tracing = { version = "0.1", features = ["log"] }
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
 tracing-bunyan-formatter = "0.3"

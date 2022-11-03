@@ -1,0 +1,8 @@
+FROM rust:alpine AS builder
+RUN apk update && \
+  apk add \
+  clang \
+  lld \
+  build-base \
+  libressl-dev
+RUN cargo install cargo-chef
