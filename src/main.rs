@@ -2,6 +2,7 @@ use secrecy::ExposeSecret;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::net::TcpListener;
+use std::time::Duration;
 use zero2prod::configuration::get_configuration;
 use zero2prod::startup::run;
 use zero2prod::telemetry::{get_subscriber, setup_logger};
@@ -18,7 +19,7 @@ async fn main() -> std::io::Result<()> {
         configuration.application.host, configuration.application.port
     );
     let connection_pool = PgPoolOptions::new()
-        .acquire_timeout(5)
+        .acquire_timeout(Duration::new(5, 0))
         .connect_lazy_with(configuration.database.with_db());
 
     let listener = TcpListener::bind(address)?;
