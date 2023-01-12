@@ -3,32 +3,32 @@ use actix_web::{web, HttpResponse};
 use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
+use unicode_segmentation::UnicodeSegmentation;
+use crate::domain::{NewSubscriber, SubscriberName};
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
-    email: String,
     name: String,
+    email: String,
 }
 
-// `Result` has two variants: `Ok` and `Err`
-// The first for successes, the second for failures.
-// We use a `match` statement to choose what to do based
-// on the outcome.
-// Spans, like logs, have an associated level
-// `info_span` creates a span at the info-level
-// We do not call `.enter` on query_span!
-// `.instrument` takes care of it at the right moments
-// in the query future lifetime
 #[tracing::instrument(
     name = "Adding a new subscriber",
     skip(form, pool),
     fields(
-        subscriber_email = %form.email,
-        subscriber_name = %form.name
+        subscriber_email = %form.0.email,
+        subscriber_name = %form.0.name
         )
     )]
-pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
-    match insert_subscriber(&pool, &form).await {
+pub async fn subscribe(
+        form: web::Form<FormData>,
+        pool: web::Data<PgPool>
+) -> HttpResponse {
+    let new_subscriber = NewSubscriber {
+        email: form.0.email,
+        name: SubscriberName::parse(form.0.name).expect("Name validation failed."),
+    };
+    match insert_subscriber(&pool, &new_subscriber).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
@@ -36,17 +36,17 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> Ht
 
 #[tracing::instrument(
     name = "Saving new subscriber details in the database",
-    skip(form, pool)
+    skip(new_subscriber, pool)
 )]
-pub async fn insert_subscriber(pool: &PgPool, form: &FormData) -> Result<(), sqlx::Error> {
+pub async fn insert_subscriber(pool: &PgPool, new_subscriber: &NewSubscriber) -> Result<(), sqlx::Error> {
     sqlx::query!(
-        r#"
+            r#"
     INSERT INTO subscriptions (id, email, name, subscribed_at)
     VALUES ($1, $2, $3, $4)
             "#,
         Uuid::new_v4(),
-        form.email,
-        form.name,
+        new_subscriber.email,
+        new_subscriber.name.as_ref(),
         Utc::now()
     )
     // We use `get_ref` to get an immutable reference to the `PgConnection`
@@ -60,4 +60,30 @@ pub async fn insert_subscriber(pool: &PgPool, form: &FormData) -> Result<(), sql
         // if the function failed, returning a sqlx::Error
     })?;
     Ok(())
+}
+
+/// Returns `true` if the input satisfies all our validation constraints
+/// on subscriber names, `false` otherwise.
+pub fn is_valid_name(s: &str) -> bool {
+    // `.trim()` returns a view over the input `s` without trailing
+    // whitespace-like characters.
+    // `.is_empty()` checks if the view contains any character.
+    let is_empty_or_whitespace = s.trim().is_empty();
+
+    // A grapheme is defined by the Unicode standard as a "user-perceived"
+    // character: `å` is a single grapheme, but it is composed of two characters
+    // (`a` and `̊`).
+    //
+    // `graphemes` returns an iterator over the graphemes in the input `s`.
+    // `true` specifies that we want to use the extended grapheme definition set,
+    // the recommended one.
+    let is_too_long = s.graphemes(true).count() > 256;
+
+    // Iterate over all characters in the input `s` to check if any of them matches
+    // one of the character in the forbidden array.
+    let forbidden_characters = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
+    let contains_forbidden_characters = s.chars().any(|g| forbidden_characters.contains(&g));
+
+    // Return `false` if any of our conditions have been violated
+    !(is_empty_or_whitespace || is_too_long || contains_forbidden_characters)
 }
