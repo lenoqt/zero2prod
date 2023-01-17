@@ -1,7 +1,7 @@
 //! src/domain/subscriber_email.rs
 use validator::validate_email;
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, Clone)]
 pub struct SubscriberEmail(String);
 
 impl SubscriberEmail {

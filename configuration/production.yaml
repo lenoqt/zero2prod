@@ -4,3 +4,6 @@ application:
 database:
   # New entry
   require_ssl: true
+email_client:
+    base_url: "https://api.sendgrid.com"
+    sender_email: "something@gmail.com"
