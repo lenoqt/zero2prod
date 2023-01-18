@@ -15,8 +15,6 @@ use zero2prod::startup::run;
 use zero2prod::telemetry::{get_subscriber, setup_logger};
 // use once_cell::sync::Lazy; another option to setup logger only once.
 
-
-
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
