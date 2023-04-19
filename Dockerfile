@@ -1,11 +1,12 @@
 # We use the latest Rust stable release as base image
 # Builder stage
-FROM rust-alpine-chef AS chef
+FROM lukemathwalker/cargo-chef:latest AS chef
 
 # Let's switch our working directory to `app` (equivalent to `cd app`)
 # The `app` folder will be created for us by Docker in case it does not 
 # exist already 
 WORKDIR /app
+RUN apt update && apt install lld clang -y
 
 FROM chef as planner
 COPY . . 
