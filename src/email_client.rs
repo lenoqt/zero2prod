@@ -98,11 +98,12 @@ pub struct Content<'a> {
 mod tests {
     use crate::domain::SubscriberEmail;
     use crate::email_client::EmailClient;
+    use claim::{assert_ok, assert_err};
     use fake::faker::internet::en::SafeEmail;
     use fake::faker::lorem::en::{Paragraph, Sentence};
     use fake::{Fake, Faker};
     use secrecy::Secret;
-    use wiremock::matchers::{header, header_exists, method, path};
+    use wiremock::matchers::{any, header, header_exists, method, path};
     use wiremock::Request;
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -112,7 +113,6 @@ mod tests {
         fn matches(&self, request: &Request) -> bool {
             let result: Result<serde_json::Value, _> = serde_json::from_slice(&request.body);
             if let Ok(body) = result {
-                dbg!(&body);
                 body.get("personalizations").is_some()
                     && body.get("from").is_some()
                     && body.get("subject").is_some()
@@ -145,7 +145,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn send_email_fires_a_request_to_base_url() {
+    async fn send_email_sends_the_expected_request() {
         // Arrange
         let mock_server = MockServer::start().await;
         let email_client = email_client(mock_server.uri());
@@ -163,5 +163,51 @@ mod tests {
         let _ = email_client
             .send_email(email(), &subject(), &content(), &content())
             .await;
+    }
+
+    #[tokio::test]
+    async fn send_email_succeds_if_the_server_returns_200() {
+        // Arrange
+        let mock_server = MockServer::start().await;
+        let email_client = email_client(mock_server.uri());
+        // We do not copy in all the matchers we have in the other test.
+        // The purpose of this test is not to assert on the request we
+        // are sending out!
+        // We add the bare minimum needed to trigger the path we want
+        // to test in `send_email()`
+        Mock::given(any())
+            .respond_with(ResponseTemplate::new(200))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        // Act
+        let outcome = email_client
+            .send_email(email(), &subject(), &content(), &content())
+            .await;
+
+        // Assert
+        assert_ok!(outcome);
+    }
+
+    #[tokio::test]
+    async fn send_email_fails_if_the_server_returns_500() {
+        // Arrange 
+        let mock_server = MockServer::start().await;
+        let email_client = email_client(mock_server.uri());
+
+        Mock::given(any())
+        .respond_with(ResponseTemplate::new(500))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        // Act 
+        let outcome = email_client.send_email(
+            email(), &subject(), &content(), &content()
+        ).await;
+
+        // Assert 
+        assert_err!(outcome);
     }
 }
