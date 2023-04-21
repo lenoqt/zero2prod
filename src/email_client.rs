@@ -9,7 +9,7 @@ pub struct EmailClient {
     http_client: Client,
     base_url: String,
     sender: SubscriberEmail,
-    autorization_token: Secret<String>,
+    sendgrid_api_token: Secret<String>,
 }
 
 impl EmailClient {
@@ -17,14 +17,17 @@ impl EmailClient {
         base_url: String,
         sender: SubscriberEmail,
         autorization_token: Secret<String>,
+        timeout: std::time::Duration,
     ) -> Self {
+        let http_client = Client::builder().timeout(timeout).build().unwrap();
         Self {
-            http_client: Client::new(),
+            http_client,
             base_url,
             sender,
-            autorization_token,
+            sendgrid_api_token: autorization_token,
         }
     }
+
     pub async fn send_email(
         &self,
         recipient: SubscriberEmail,
@@ -35,64 +38,60 @@ impl EmailClient {
         let url = format!("{}/v3/mail/send", self.base_url);
         let request_body = SendEmailRequest {
             personalizations: vec![Personalization {
-                to: vec![To {
-                    email: recipient.as_ref().to_owned(),
-                }],
+                to: vec![recipient],
             }],
             from: From {
-                email: self.sender.as_ref().to_owned(),
+                email: self.sender.as_ref(),
             },
-            subject: subject.to_owned(),
+            subject,
             content: vec![
                 Content {
-                    type_field: "text/plain".to_owned(),
-                    value: text_content.to_owned(),
+                    type_field: "text/plain",
+                    value: text_content,
                 },
                 Content {
-                    type_field: "text/html".to_owned(),
-                    value: html_content.to_owned(),
+                    type_field: "text/html",
+                    value: html_content,
                 },
             ],
         };
-        let builder = self
-            .http_client
+        self.http_client
             .post(&url)
-            .header("Authorization", self.autorization_token.expose_secret())
+            .header(
+                reqwest::header::AUTHORIZATION,
+                format!("Bearer {}", self.sendgrid_api_token.expose_secret()),
+            )
             .json(&request_body)
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
         Ok(())
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct SendEmailRequest {
+#[derive(serde::Serialize, Debug)]
+pub struct SendEmailRequest<'a> {
     pub personalizations: Vec<Personalization>,
-    pub from: From,
-    pub subject: String,
-    pub content: Vec<Content>,
+    pub from: From<'a>,
+    pub subject: &'a str,
+    pub content: Vec<Content<'a>>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, Debug)]
 pub struct Personalization {
-    pub to: Vec<To>,
+    pub to: Vec<SubscriberEmail>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct To {
-    pub email: String,
+#[derive(serde::Serialize, Debug)]
+pub struct From<'a> {
+    pub email: &'a str,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct From {
-    pub email: String,
-}
-
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct Content {
+#[derive(serde::Serialize, Debug)]
+pub struct Content<'a> {
     #[serde(rename = "type")]
-    pub type_field: String,
-    pub value: String,
+    pub type_field: &'a str,
+    pub value: &'a str,
 }
 
 #[cfg(test)]
@@ -103,27 +102,66 @@ mod tests {
     use fake::faker::lorem::en::{Paragraph, Sentence};
     use fake::{Fake, Faker};
     use secrecy::Secret;
-    use wiremock::matchers::any;
+    use wiremock::matchers::{header, header_exists, method, path};
+    use wiremock::Request;
     use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    struct SendEmailBodyMatcher;
+
+    impl wiremock::Match for SendEmailBodyMatcher {
+        fn matches(&self, request: &Request) -> bool {
+            let result: Result<serde_json::Value, _> = serde_json::from_slice(&request.body);
+            if let Ok(body) = result {
+                dbg!(&body);
+                body.get("personalizations").is_some()
+                    && body.get("from").is_some()
+                    && body.get("subject").is_some()
+                    && body.get("content").is_some()
+            } else {
+                false
+            }
+        }
+    }
+
+    fn subject() -> String {
+        Sentence(1..2).fake()
+    }
+
+    fn content() -> String {
+        Paragraph(1..10).fake()
+    }
+
+    fn email() -> SubscriberEmail {
+        SubscriberEmail::parse(SafeEmail().fake()).unwrap()
+    }
+
+    fn email_client(base_url: String) -> EmailClient {
+        EmailClient::new(
+            base_url,
+            email(),
+            Secret::new(Faker.fake()),
+            std::time::Duration::from_millis(200),
+        )
+    }
 
     #[tokio::test]
     async fn send_email_fires_a_request_to_base_url() {
+        // Arrange
         let mock_server = MockServer::start().await;
-        let sender = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
-        let email_client = EmailClient::new(mock_server.uri(), sender, Secret::new(Faker.fake()));
+        let email_client = email_client(mock_server.uri());
 
-        Mock::given(any())
+        Mock::given(header_exists("Authorization"))
+            .and(header("Content-Type", "application/json"))
+            .and(path("/v3/mail/send"))
+            .and(method("POST"))
+            .and(SendEmailBodyMatcher)
             .respond_with(ResponseTemplate::new(200))
             .expect(1)
             .mount(&mock_server)
             .await;
 
-        let subscriber_email = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
-        let subject: String = Sentence(1..2).fake();
-        let content: String = Paragraph(1..10).fake();
-
         let _ = email_client
-            .send_email(subscriber_email, &subject, &content, &content)
+            .send_email(email(), &subject(), &content(), &content())
             .await;
     }
 }

@@ -1,7 +1,7 @@
 //! src/domain/subscriber_email.rs
 use validator::validate_email;
 
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct SubscriberEmail(String);
 
 impl SubscriberEmail {
@@ -39,7 +39,6 @@ mod tests {
 
     #[quickcheck_macros::quickcheck]
     fn valid_emails_are_parsed_successfully(valid_email: ValidEmailFixture) -> bool {
-        dbg!(&valid_email.0);
         SubscriberEmail::parse(valid_email.0).is_ok()
     }
 
