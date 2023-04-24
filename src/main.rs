@@ -14,6 +14,7 @@ async fn main() -> std::io::Result<()> {
 
     // Panic if we can't read the configuration
     let configuration = get_configuration().expect("Failed to read configuration.");
+    let timeout = configuration.email_client.timeout();
     let address = format!(
         "{}:{}",
         configuration.application.host, configuration.application.port
@@ -30,7 +31,7 @@ async fn main() -> std::io::Result<()> {
         configuration.email_client.base_url,
         sender_email,
         configuration.email_client.sendgrid_api_key,
-        std::time::Duration::from_millis(200),
+        timeout,
     );
     let listener = TcpListener::bind(address)?;
     run(listener, connection_pool, email_client)?.await?;

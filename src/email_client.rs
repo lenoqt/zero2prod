@@ -98,7 +98,7 @@ pub struct Content<'a> {
 mod tests {
     use crate::domain::SubscriberEmail;
     use crate::email_client::EmailClient;
-    use claim::{assert_ok, assert_err};
+    use claim::{assert_err, assert_ok};
     use fake::faker::internet::en::SafeEmail;
     use fake::faker::lorem::en::{Paragraph, Sentence};
     use fake::{Fake, Faker};
@@ -192,22 +192,44 @@ mod tests {
 
     #[tokio::test]
     async fn send_email_fails_if_the_server_returns_500() {
-        // Arrange 
+        // Arrange
         let mock_server = MockServer::start().await;
         let email_client = email_client(mock_server.uri());
 
         Mock::given(any())
-        .respond_with(ResponseTemplate::new(500))
+            .respond_with(ResponseTemplate::new(500))
             .expect(1)
             .mount(&mock_server)
             .await;
 
-        // Act 
-        let outcome = email_client.send_email(
-            email(), &subject(), &content(), &content()
-        ).await;
+        // Act
+        let outcome = email_client
+            .send_email(email(), &subject(), &content(), &content())
+            .await;
 
-        // Assert 
+        // Assert
+        assert_err!(outcome);
+    }
+
+    #[tokio::test]
+    async fn send_email_times_out_if_the_server_takes_too_long() {
+        // Arrange
+        let mock_server = MockServer::start().await;
+        let email_client = email_client(mock_server.uri());
+
+        let response = ResponseTemplate::new(200).set_delay(std::time::Duration::from_secs(5));
+        Mock::given(any())
+            .respond_with(response)
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        // Act
+        let outcome = email_client
+            .send_email(email(), &subject(), &content(), &content())
+            .await;
+
+        // Assert
         assert_err!(outcome);
     }
 }
