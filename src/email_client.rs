@@ -16,7 +16,7 @@ impl EmailClient {
     pub fn new(
         base_url: String,
         sender: SubscriberEmail,
-        autorization_token: Secret<String>,
+        authorization_token: Secret<String>,
         timeout: std::time::Duration,
     ) -> Self {
         let http_client = Client::builder().timeout(timeout).build().unwrap();
@@ -24,7 +24,7 @@ impl EmailClient {
             http_client,
             base_url,
             sender,
-            sendgrid_api_token: autorization_token,
+            sendgrid_api_token: authorization_token,
         }
     }
 
@@ -166,7 +166,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn send_email_succeds_if_the_server_returns_200() {
+    async fn send_email_succeeds_if_the_server_returns_200() {
         // Arrange
         let mock_server = MockServer::start().await;
         let email_client = email_client(mock_server.uri());
