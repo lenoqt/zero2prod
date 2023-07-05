@@ -1,6 +1,5 @@
-//! tests/api/subscriptions.rs 
+//! tests/api/subscriptions.rs
 use crate::helpers::spawn_app;
-
 
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
