@@ -11,5 +11,5 @@ database:
 email_client:
     base_url: "localhost"
     sender_email: "gustavoantonio51@gmail.com"
-    sendgrid_api_key: "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"
+    sendgrid_api_key: "sendgridtoken"
     timeout_milliseconds: 10000
