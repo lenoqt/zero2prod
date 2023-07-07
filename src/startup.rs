@@ -29,8 +29,7 @@ impl Application {
             .email_client
             .sender()
             .expect("Invalid sender email address");
-        let timeout =
-            std::time::Duration::from_millis(configuration.email_client.timeout_milliseconds);
+        let timeout = Duration::from_millis(configuration.email_client.timeout_milliseconds);
         let email_client = EmailClient::new(
             configuration.email_client.base_url,
             sender_email,
@@ -79,8 +78,8 @@ pub fn run(
     base_url: String,
 ) -> Result<Server, std::io::Error> {
     // Wrap the connection in a smart pointer
-    let db_pool = web::Data::new(db_pool);
-    let email_client = web::Data::new(email_client);
+    let db_pool = Data::new(db_pool);
+    let email_client = Data::new(email_client);
     let base_url = Data::new(ApplicationBaseUrl(base_url));
     // Capture `connection` from the surrounding environment
     let server = HttpServer::new(move || {

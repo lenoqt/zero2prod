@@ -7,6 +7,13 @@ use zero2prod::configuration::{get_configuration, DatabaseSettings};
 use zero2prod::startup::{get_connection_pool, Application};
 use zero2prod::telemetry::{get_subscriber, setup_logger};
 
+/// Confirmation links embedded in the request to the email API
+#[derive(Debug)]
+pub struct ConfirmationLinks {
+    pub html: reqwest::Url,
+    pub plain_text: reqwest::Url,
+}
+
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
@@ -23,6 +30,29 @@ impl TestApp {
             .send()
             .await
             .expect("Failed to execute request")
+    }
+
+    pub fn get_confirmation_links(&self, email_request: &wiremock::Request) -> ConfirmationLinks {
+        // Parse the body as JSON, starting from raw bytes
+        let body: serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
+
+        // Extract the link from one of the request fields.
+        let get_link = |s: &str| {
+            let links: Vec<_> = linkify::LinkFinder::new()
+                .links(s)
+                .filter(|l| *l.kind() == linkify::LinkKind::Url)
+                .collect();
+            assert_eq!(links.len(), 1);
+            links[0].as_str().to_owned()
+        };
+
+        let html_link = get_link(body["content"][1]["value"].as_str().unwrap());
+        let text_link = get_link(body["content"][0]["value"].as_str().unwrap());
+
+        ConfirmationLinks {
+            html: html_link.as_str().parse().unwrap(),
+            plain_text: text_link.as_str().parse().unwrap(),
+        }
     }
 }
 
