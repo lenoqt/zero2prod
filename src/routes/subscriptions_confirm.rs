@@ -1,6 +1,7 @@
 //! src/routes/subscriptions_confirm.rs
 use actix_web::{web, HttpResponse};
 
+#[allow(dead_code)] // TODO: Remove this later.
 #[derive(serde::Deserialize)]
 pub struct Parameters {
     subscription_token: String,
