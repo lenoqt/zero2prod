@@ -69,7 +69,7 @@ impl EmailClient {
     }
 }
 
-#[derive(serde::Serialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct SendEmailRequest<'a> {
     pub personalizations: Vec<Personalization>,
     pub from: From<'a>,
@@ -77,17 +77,17 @@ pub struct SendEmailRequest<'a> {
     pub content: Vec<Content<'a>>,
 }
 
-#[derive(serde::Serialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Personalization {
     pub to: Vec<SubscriberEmail>,
 }
 
-#[derive(serde::Serialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct From<'a> {
     pub email: &'a str,
 }
 
-#[derive(serde::Serialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Content<'a> {
     #[serde(rename = "type")]
     pub type_field: &'a str,
