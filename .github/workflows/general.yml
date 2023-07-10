@@ -9,6 +9,9 @@ on:
       - main
 env:
   CARGO_TERM_COLOR: always
+  SQLX_VERSION: 0.6.2
+  SQLX_FEATURES: "rustls,postgres"
+
 jobs:
   test:
     name: Test
