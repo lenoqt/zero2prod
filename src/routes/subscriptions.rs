@@ -119,13 +119,7 @@ pub async fn insert_subscriber(
     // We use `get_ref` to get an immutable reference to the `PgConnection`
     // wrapped by `web::Data`
     .execute(transaction)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-        // Using the `?` operator to return early
-        // if the function failed, returning a sqlx::Error
-    })?;
+    .await?;
     Ok(subscriber_id)
 }
 
@@ -209,10 +203,7 @@ pub async fn store_token(
     )
     .execute(transaction)
     .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        StoreTokenError(e)
-    })?;
+    .map_err(StoreTokenError)?;
     Ok(())
 }
 
