@@ -30,7 +30,7 @@ impl EmailClient {
 
     pub async fn send_email(
         &self,
-        recipient: SubscriberEmail,
+        recipient: &SubscriberEmail,
         subject: &str,
         html_content: &str,
         text_content: &str,
@@ -38,7 +38,7 @@ impl EmailClient {
         let url = format!("{}/v3/mail/send", self.base_url);
         let request_body = SendEmailRequest {
             personalizations: vec![Personalization {
-                to: vec![recipient],
+                to: vec![recipient.as_ref()],
             }],
             from: From {
                 email: self.sender.as_ref(),
@@ -69,25 +69,25 @@ impl EmailClient {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, Debug)]
 pub struct SendEmailRequest<'a> {
-    pub personalizations: Vec<Personalization>,
+    pub personalizations: Vec<Personalization<'a>>,
     pub from: From<'a>,
     pub subject: &'a str,
     pub content: Vec<Content<'a>>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct Personalization {
-    pub to: Vec<SubscriberEmail>,
+#[derive(serde::Serialize, Debug)]
+pub struct Personalization<'a> {
+    pub to: Vec<&'a str>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, Debug)]
 pub struct From<'a> {
     pub email: &'a str,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, Debug)]
 pub struct Content<'a> {
     #[serde(rename = "type")]
     pub type_field: &'a str,
@@ -161,7 +161,7 @@ mod tests {
             .await;
 
         let _ = email_client
-            .send_email(email(), &subject(), &content(), &content())
+            .send_email(&email(), &subject(), &content(), &content())
             .await;
     }
 
@@ -183,7 +183,7 @@ mod tests {
 
         // Act
         let outcome = email_client
-            .send_email(email(), &subject(), &content(), &content())
+            .send_email(&email(), &subject(), &content(), &content())
             .await;
 
         // Assert
@@ -204,7 +204,7 @@ mod tests {
 
         // Act
         let outcome = email_client
-            .send_email(email(), &subject(), &content(), &content())
+            .send_email(&email(), &subject(), &content(), &content())
             .await;
 
         // Assert
@@ -226,7 +226,7 @@ mod tests {
 
         // Act
         let outcome = email_client
-            .send_email(email(), &subject(), &content(), &content())
+            .send_email(&email(), &subject(), &content(), &content())
             .await;
 
         // Assert

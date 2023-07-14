@@ -1,4 +1,5 @@
 //! src/domain/subscriber_email.rs
+use std::fmt::{Debug, Formatter};
 use validator::validate_email;
 
 #[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
@@ -17,6 +18,14 @@ impl SubscriberEmail {
 impl AsRef<str> for SubscriberEmail {
     fn as_ref(&self) -> &str {
         &self.0
+    }
+}
+
+impl std::fmt::Display for SubscriberEmail {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // We just forward to the Display implementation of
+        // the wrapped String
+        std::fmt::Display::fmt(&self.0, f)
     }
 }
 

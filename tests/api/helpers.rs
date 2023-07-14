@@ -43,7 +43,12 @@ impl TestApp {
                 .filter(|l| *l.kind() == linkify::LinkKind::Url)
                 .collect();
             assert_eq!(links.len(), 1);
-            links[0].as_str().to_owned()
+            let raw_link = links[0].as_str().to_owned();
+            let mut confirmation_link = reqwest::Url::parse(&raw_link).unwrap();
+            // Making sure we don't call random APIs on the web
+            assert_eq!(confirmation_link.host_str().unwrap(), "127.0.0.1");
+            confirmation_link.set_port(Some(self.port)).unwrap();
+            confirmation_link
         };
 
         let html_link = get_link(body["content"][1]["value"].as_str().unwrap());
@@ -53,6 +58,15 @@ impl TestApp {
             html: html_link.as_str().parse().unwrap(),
             plain_text: text_link.as_str().parse().unwrap(),
         }
+    }
+
+    pub async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(&format!("{}/newsletters", &self.address))
+            .json(&body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
     }
 }
 
