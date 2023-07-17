@@ -9,7 +9,8 @@ use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
 use anyhow::Context;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use secrecy::Secret;
+use secrecy::{ExposeSecret, Secret};
+use sha3::Digest;
 use sqlx::PgPool;
 use std::fmt::Formatter;
 
@@ -97,13 +98,21 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Erro
     })
 }
 
+#[tracing::instrument(
+    name = "Publish a newsletter issue",
+    skip(body, pool, email_client, request),
+    fields(username=tracing::field::Empty, user_id=tracing::field::Empty)
+)]
 pub async fn publish_newsletter(
     body: web::Json<BodyData>,
     pool: web::Data<PgPool>,
     email_client: web::Data<EmailClient>,
     request: HttpRequest,
 ) -> Result<HttpResponse, PublishError> {
-    let _credentials = basic_authentication(request.headers()).map_err(PublishError::AuthError)?;
+    let credentials = basic_authentication(request.headers()).map_err(PublishError::AuthError)?;
+    tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
+    let user_id = validate_credentials(credentials, &pool).await?;
+    tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
     let subscribers = get_confirmed_subscribers(&pool).await?;
     for subscriber in subscribers {
         // The compiler forces us to handle both cases `Ok` & `Err`
@@ -169,4 +178,32 @@ async fn get_confirmed_subscribers(
     })
     .collect();
     Ok(confirmed_subscribers)
+}
+
+async fn validate_credentials(
+    credentials: Credentials,
+    pool: &PgPool,
+) -> Result<uuid::Uuid, PublishError> {
+    let password_hash = sha3::Sha3_256::digest(credentials.password.expose_secret().as_bytes());
+    // Lowercase hexadecimal encoding.
+    let password_hash = format!("{:x}", password_hash);
+    let user_id: Option<_> = sqlx::query!(
+        r#"
+        SELECT user_id
+        FROM users
+        WHERE username = $1 AND password_hash = $2
+        "#,
+        credentials.username,
+        password_hash
+    )
+    .fetch_optional(pool)
+    .await
+    .context("Failed to perform a query to validate auth credentials.")
+    .map_err(PublishError::UnexpectedError)?;
+
+    user_id
+        // Check that user is not `None`
+        .map(|row| row.user_id)
+        .ok_or_else(|| anyhow::anyhow!("Invalid username or password."))
+        .map_err(PublishError::AuthError)
 }
