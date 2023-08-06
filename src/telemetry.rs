@@ -1,4 +1,6 @@
 use std::sync::Once;
+
+use tokio::task::JoinHandle;
 use tracing::{subscriber::set_global_default, Subscriber};
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
@@ -51,4 +53,18 @@ pub fn setup_logger(subscriber: impl Subscriber + Send + Sync) {
         LogTracer::init().expect("Failed to set logger");
         set_global_default(subscriber).expect("Failed to set subscriber");
     });
+}
+
+// Just copied trait bound and signature from `spawn_blocking`
+pub fn spawn_blocking_with_tracing<F, R>(f: F) -> JoinHandle<R>
+where
+    F: FnOnce() -> R + Send + 'static,
+    R: Send + 'static,
+{
+    // This executes before spawning a new thread
+    let current_span = tracing::Span::current();
+    // We then pass ownership to it into the closure
+    // and explicitly executes all our computation
+    // within its score.
+    tokio::task::spawn_blocking(move || current_span.in_scope(f))
 }

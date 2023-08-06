@@ -1,8 +1,7 @@
 //! src/routes/newsletters.rs
 
-use crate::domain::SubscriberEmail;
-use crate::email_client::EmailClient;
-use crate::routes::error_chain_fmt;
+use std::fmt::Formatter;
+
 use actix_web::http::header::{HeaderMap, HeaderValue};
 use actix_web::http::{header, StatusCode};
 use actix_web::{web, HttpRequest, HttpResponse, ResponseError};
@@ -12,7 +11,11 @@ use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use secrecy::{ExposeSecret, Secret};
 use sqlx::PgPool;
-use std::fmt::Formatter;
+
+use crate::domain::SubscriberEmail;
+use crate::email_client::EmailClient;
+use crate::routes::error_chain_fmt;
+use crate::telemetry::spawn_blocking_with_tracing;
 
 #[derive(serde::Deserialize)]
 pub struct BodyData {
@@ -190,7 +193,7 @@ async fn validate_credentials(
         .map_err(PublishError::UnexpectedError)?
         .ok_or_else(|| PublishError::AuthError(anyhow::anyhow!("Unknown username.")))?;
 
-    tokio::task::spawn_blocking(move || {
+    spawn_blocking_with_tracing(move || {
         verify_password_hash(expected_password_hash, credentials.password)
     })
     .await
