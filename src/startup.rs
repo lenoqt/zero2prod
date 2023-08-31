@@ -1,15 +1,17 @@
 //! src/startup.rs
-use crate::configuration::{DatabaseSettings, Settings};
-use crate::email_client::EmailClient;
-use crate::routes::{confirm, health_check, publish_newsletter, subscribe};
+use std::net::TcpListener;
+use std::time::Duration;
+
 use actix_web::dev::Server;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
-use std::net::TcpListener;
-use std::time::Duration;
 use tracing_actix_web::TracingLogger;
+
+use crate::configuration::{DatabaseSettings, Settings};
+use crate::email_client::EmailClient;
+use crate::routes::{confirm, health_check, home, login_form, publish_newsletter, subscribe};
 
 pub struct Application {
     port: u16,
@@ -89,6 +91,8 @@ pub fn run(
             .route("/subscriptions", web::post().to(subscribe))
             .route("subscriptions/confirm", web::get().to(confirm))
             .route("newsletters", web::post().to(publish_newsletter))
+            .route("/", web::get().to(home))
+            .route("/login", web::get().to(login_form))
             // Register the connection as part of the application state
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
