@@ -1,12 +1,13 @@
 //! src/configuration.rs
 //!
-use crate::domain::SubscriberEmail;
 use secrecy::ExposeSecret;
 use secrecy::Secret;
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::PgConnectOptions;
 use sqlx::postgres::PgSslMode;
 use sqlx::ConnectOptions;
+
+use crate::domain::SubscriberEmail;
 
 #[derive(serde::Deserialize, Clone)]
 pub struct Settings {
@@ -39,6 +40,7 @@ pub struct ApplicationSettings {
     pub port: u16,
     pub host: String,
     pub base_url: String,
+    pub hmac_secret: Secret<String>,
 }
 
 #[derive(serde::Deserialize, Clone)]
