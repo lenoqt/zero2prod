@@ -1,5 +1,6 @@
-# scripts/init_redis.sh
 #!/usr/bin/env bash
+# scripts/init_redis.sh
+
 set -x
 set -eo pipefail
 
