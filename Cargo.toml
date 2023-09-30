@@ -10,7 +10,7 @@ actix-web = "4"
 tokio = { version = "1.28.2", features = ["macros", "rt-multi-thread"] }
 serde = { version = "^1.0.143", features = ["derive"] }
 config = { version= "0.13", default-features = false, features = ["yaml"] }
-uuid = { version = "1", features = ["v4"] }
+uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4.22", default-features = false, features = ["clock"] }
 serde-aux = "4.2.0"
 tracing = { version = "0.1", features = ["log"] }
@@ -29,6 +29,7 @@ argon2 = { version = "0.5.1", features = ["std"] }
 urlencoding = "2.1.3"
 htmlescape = "0.3.1"
 actix-web-flash-messages = { version = "0.4.2", features = ["cookies"] }
+serde_json = "1.0.107"
 
 [dependencies.sqlx]
 version = "0.6.1"
