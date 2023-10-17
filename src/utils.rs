@@ -28,3 +28,10 @@ pub async fn check_password_length(password: &str) -> Result<(), AuthError> {
         _ => Ok(()),
     };
 }
+
+pub fn e400<T: std::fmt::Debug + std::fmt::Display>(e: T) -> actix_web::Error
+where
+    T: std::fmt::Debug + std::fmt::Display + 'static,
+{
+    actix_web::error::ErrorBadRequest(e)
+}

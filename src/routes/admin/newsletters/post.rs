@@ -9,13 +9,15 @@ use sqlx::PgPool;
 use crate::authentication::UserId;
 use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
-use crate::utils::{e500, see_other};
+use crate::idempotency::{get_saved_response, save_response, IdempotencyKey};
+use crate::utils::{e400, e500, see_other};
 
 #[derive(serde::Deserialize)]
 pub struct NewsletterContent {
     title: String,
     html_content: String,
     text_content: String,
+    idempotency_key: String,
 }
 
 #[tracing::instrument(
@@ -29,18 +31,26 @@ pub async fn publish_newsletter(
     pool: web::Data<PgPool>,
     email_client: web::Data<EmailClient>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let NewsletterContent {
+        title,
+        text_content,
+        html_content,
+        idempotency_key,
+    } = form.0;
+    let idempotency_key: IdempotencyKey = idempotency_key.try_into().map_err(e400)?;
+    if let Some(saved_response) = get_saved_response(&pool, &idempotency_key, **user_id)
+        .await
+        .map_err(e500)?
+    {
+        return Ok(saved_response);
+    }
     let subscribers = get_confirmed_subscribers(&pool).await.map_err(e500)?;
     for subscriber in subscribers {
         // The compiler forces us to handle both cases `Ok` & `Err`
         match subscriber {
             Ok(subscriber) => {
                 email_client
-                    .send_email(
-                        &subscriber.email,
-                        &form.title,
-                        &form.html_content,
-                        &form.text_content,
-                    )
+                    .send_email(&subscriber.email, &title, &html_content, &text_content)
                     .await
                     // Use `with_context` when there's a runtime cost. format macro stores the string into
                     // the heap, using `context` would be allocating that string every time we send an
@@ -64,7 +74,11 @@ pub async fn publish_newsletter(
         }
     }
     FlashMessage::info("The newsletter issue has been published!").send();
-    Ok(see_other("/admin/newsletters"))
+    let response = see_other("/admin/newsletters");
+    let response = save_response(&pool, &idempotency_key, **user_id, response)
+        .await
+        .map_err(e500)?;
+    Ok(response)
 }
 
 struct ConfirmedSubscriber {
